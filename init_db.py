@@ -29,7 +29,7 @@ def init_database():
         if not admin_user:
             admin_user = User(
                 username='admin',
-                email='admin@atech.industries',
+                email='admin@admin.com',
                 first_name='System',
                 last_name='Administrator',
                 role=roles[RoleEnum.ADMIN.value],
@@ -44,7 +44,7 @@ def init_database():
         if not manager_user:
             manager_user = User(
                 username='manager',
-                email='manager@crm.com',
+                email='manager@manager.com',
                 first_name='John',
                 last_name='Manager',
                 role=roles[RoleEnum.MANAGER.value],
@@ -58,7 +58,7 @@ def init_database():
         if not employee_user:
             employee_user = User(
                 username='employee',
-                email='employee@crm.com',
+                email='employee@employee.com',
                 first_name='Jane',
                 last_name='Employee',
                 role=roles[RoleEnum.EMPLOYEE.value],
