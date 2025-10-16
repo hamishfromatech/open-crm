@@ -113,19 +113,21 @@ class SecureAdminIndexView(AdminIndexView):
 
         return super(SecureAdminIndexView, self).index()
 
-def init_admin_views(admin):
+def init_admin_views(admin_instance):
     """Initialize Flask-Admin views"""
+    # Import db from the main app module
+    from app import db
 
     # Add model views with appropriate permissions
-    admin.add_view(UserAdmin(User, db.session, category='Users'))
-    admin.add_view(RoleAdmin(UserRole, db.session, category='Users'))
+    admin_instance.add_view(UserAdmin(User, db.session, category='Users'))
+    admin_instance.add_view(RoleAdmin(UserRole, db.session, category='Users'))
 
-    admin.add_view(CustomerAdmin(Customer, db.session, category='CRM'))
-    admin.add_view(ContactAdmin(Contact, db.session, category='CRM'))
-    admin.add_view(LeadAdmin(Lead, db.session, category='CRM'))
-    admin.add_view(OpportunityAdmin(Opportunity, db.session, category='CRM'))
-    admin.add_view(ActivityAdmin(Activity, db.session, category='CRM'))
-    admin.add_view(DocumentAdmin(Document, db.session, category='CRM'))
+    admin_instance.add_view(CustomerAdmin(Customer, db.session, category='CRM'))
+    admin_instance.add_view(ContactAdmin(Contact, db.session, category='CRM'))
+    admin_instance.add_view(LeadAdmin(Lead, db.session, category='CRM'))
+    admin_instance.add_view(OpportunityAdmin(Opportunity, db.session, category='CRM'))
+    admin_instance.add_view(ActivityAdmin(Activity, db.session, category='CRM'))
+    admin_instance.add_view(DocumentAdmin(Document, db.session, category='CRM'))
 
     # Set admin index view
-    admin._set_admin_index_view(SecureAdminIndexView(name='Admin'))
+    admin_instance._set_admin_index_view(SecureAdminIndexView(name='Admin'))

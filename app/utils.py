@@ -24,6 +24,7 @@ def cleanup_old_files(days_old=30):
     """Clean up files older than specified days"""
     from datetime import datetime, timedelta
     from app.models import Document
+    from app import db
 
     cutoff_date = datetime.utcnow() - timedelta(days=days_old)
     old_documents = Document.query.filter(Document.created_at < cutoff_date).all()

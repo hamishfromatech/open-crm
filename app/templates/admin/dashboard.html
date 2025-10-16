@@ -1,0 +1,514 @@
+{% extends "base.html" %}
+
+{% block page_title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-card-foreground">Admin Dashboard</h1>
+            <p class="text-muted-foreground">Monitor system health and manage users.</p>
+        </div>
+        <div class="flex flex-wrap gap-3">
+            <button id="refresh-metrics" type="button" class="btn-outline">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v6h6M20 20v-6h-6M5.64 17.657A9 9 0 1118.36 6.343"></path>
+                </svg>
+                Refresh Metrics
+            </button>
+            <button id="open-create-user" type="button" class="btn">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                </svg>
+                New User
+            </button>
+        </div>
+    </div>
+
+    <section class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4" id="metric-cards">
+        <article class="card">
+            <div class="card-content space-y-1">
+                <span class="text-sm text-muted-foreground">Total Users</span>
+                <p class="text-3xl font-semibold text-card-foreground" data-metric="total_users">{{ metrics.total_users }}</p>
+                <p class="text-xs text-muted-foreground">Active: <span data-metric="active_users">{{ metrics.active_users }}</span> &bull; Inactive: <span data-metric="inactive_users">{{ metrics.inactive_users }}</span></p>
+            </div>
+        </article>
+        <article class="card">
+            <div class="card-content space-y-1">
+                <span class="text-sm text-muted-foreground">New Users (30d)</span>
+                <p class="text-3xl font-semibold text-card-foreground" data-metric="new_users_30_days">{{ metrics.new_users_30_days }}</p>
+                <div class="flex gap-2 text-xs text-muted-foreground">
+                    <span>Admins: <span data-metric="admin_count">{{ metrics.admin_count }}</span></span>
+                    <span>Managers: <span data-metric="manager_count">{{ metrics.manager_count }}</span></span>
+                    <span>Employees: <span data-metric="employee_count">{{ metrics.employee_count }}</span></span>
+                </div>
+            </div>
+        </article>
+        <article class="card">
+            <div class="card-content space-y-1">
+                <span class="text-sm text-muted-foreground">CRM Overview</span>
+                <p class="text-3xl font-semibold text-card-foreground" data-metric="customer_count">{{ metrics.customer_count }}</p>
+                <p class="text-xs text-muted-foreground">Leads: <span data-metric="lead_count">{{ metrics.lead_count }}</span> &bull; Opportunities: <span data-metric="opportunity_count">{{ metrics.opportunity_count }}</span></p>
+                <p class="text-xs text-muted-foreground">Open Opportunities: <span data-metric="open_opportunities">{{ metrics.open_opportunities }}</span></p>
+            </div>
+        </article>
+        <article class="card">
+            <div class="card-content space-y-1">
+                <span class="text-sm text-muted-foreground">Activity Volume</span>
+                <p class="text-3xl font-semibold text-card-foreground" data-metric="activity_count">{{ metrics.activity_count }}</p>
+                <p class="text-xs text-muted-foreground">Last Updated <span data-metric="generated_at">{{ metrics.generated_at }}</span></p>
+            </div>
+        </article>
+    </section>
+
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <section class="card xl:col-span-2">
+            <header class="flex items-center justify-between p-6 pb-4">
+                <div>
+                    <h2 class="text-lg font-semibold text-card-foreground">User Management</h2>
+                    <p class="text-sm text-muted-foreground">Create, edit, and deactivate platform users.</p>
+                </div>
+                <button id="refresh-users" type="button" class="btn-icon-outline" title="Refresh users">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v6h6M20 20v-6h-6M5.64 17.657A9 9 0 1118.36 6.343"></path>
+                    </svg>
+                </button>
+            </header>
+            <div class="card-content pt-0">
+                <div class="table-container">
+                    <table class="table" id="users-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                                <th>Last Login</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in users %}
+                            <tr data-user-row="{{ user.id }}">
+                                <td class="font-medium">{{ user.full_name }}</td>
+                                <td>{{ user.email }}</td>
+                                <td><span class="badge ">{{ user.role_label }}</span></td>
+                                <td>
+                                    <span class="badge {{ 'badge-success' if user.is_active else 'badge-destructive' }}">
+                                        {{ 'Active' if user.is_active else 'Inactive' }}
+                                    </span>
+                                </td>
+                                <td>{{ user.last_login or 'Never' }}</td>
+                                <td class="text-right">
+                                    <div class="flex justify-end gap-2">
+                                        <button type="button" class="btn-icon-outline" data-action="edit" data-user-id="{{ user.id }}" title="Edit user">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                            </svg>
+                                        </button>
+                                        <button type="button" class="btn-icon-outline" data-action="toggle" data-user-id="{{ user.id }}" title="Toggle active state">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 12H6"></path>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center py-10 text-muted-foreground">No users found.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section class="card">
+            <div class="card-content space-y-6">
+                <div>
+                    <h3 class="text-lg font-semibold text-card-foreground">Recent Logins</h3>
+                    <ul id="recent-logins" class="space-y-3">
+                        {% for login in metrics.recent_logins %}
+                        <li class="flex items-center justify-between text-sm">
+                            <div>
+                                <p class="font-medium text-card-foreground">{{ login.full_name }}</p>
+                                <p class="text-muted-foreground">{{ login.role_label }}</p>
+                            </div>
+                            <span class="text-xs text-muted-foreground">{{ login.last_login or '—' }}</span>
+                        </li>
+                        {% else %}
+                        <li class="text-sm text-muted-foreground">No recent logins.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold text-card-foreground">Recent Activities</h3>
+                    <ul id="recent-activities" class="space-y-3">
+                        {% for activity in metrics.recent_activities %}
+                        <li class="text-sm">
+                            <p class="font-medium text-card-foreground">{{ activity.title }}</p>
+                            <p class="text-muted-foreground text-xs">{{ activity.type }} &bull; {{ activity.user }} &bull; {{ activity.created_at or '—' }}</p>
+                        </li>
+                        {% else %}
+                        <li class="text-sm text-muted-foreground">No recent activities.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+
+<dialog id="user-modal" class="dialog max-w-2xl w-full" aria-labelledby="user-modal-title">
+    <article class="bg-card text-card-foreground border border-border rounded-lg shadow-xl">
+        <header class="flex items-start justify-between gap-4 p-6 pb-4">
+            <div>
+                <h2 id="user-modal-title" class="text-xl font-bold">Create User</h2>
+                <p class="text-sm text-muted-foreground">Manage user access across the platform.</p>
+            </div>
+            <button type="button" class="btn-icon-outline" data-close-modal title="Close">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </header>
+        <section class="p-6 pt-0">
+            <form id="user-form" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="grid gap-2">
+                        <label for="user-first-name" class="label">First Name</label>
+                        <input type="text" id="user-first-name" name="first_name" class="input" required>
+                    </div>
+                    <div class="grid gap-2">
+                        <label for="user-last-name" class="label">Last Name</label>
+                        <input type="text" id="user-last-name" name="last_name" class="input" required>
+                    </div>
+                    <div class="grid gap-2">
+                        <label for="user-username" class="label">Username</label>
+                        <input type="text" id="user-username" name="username" class="input" required>
+                    </div>
+                    <div class="grid gap-2">
+                        <label for="user-email" class="label">Email</label>
+                        <input type="email" id="user-email" name="email" class="input" required>
+                    </div>
+                    <div class="grid gap-2">
+                        <label for="user-role" class="label">Role</label>
+                        <select id="user-role" name="role" class="select" required>
+                            <option value="" disabled selected>Select role</option>
+                            {% for role in roles %}
+                            <option value="{{ role.name }}">{{ role.label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="grid gap-2">
+                        <label for="user-status" class="label">Status</label>
+                        <select id="user-status" name="is_active" class="select">
+                            <option value="true" selected>Active</option>
+                            <option value="false">Inactive</option>
+                        </select>
+                    </div>
+                    <div class="md:col-span-2 grid gap-2">
+                        <label for="user-password" class="label">Password</label>
+                        <input type="password" id="user-password" name="password" class="input">
+                        <p class="text-xs text-muted-foreground" data-password-hint>Required for new users. Leave blank to keep existing password.</p>
+                    </div>
+                </div>
+            </form>
+            <p class="text-sm text-destructive hidden" id="user-form-error"></p>
+        </section>
+        <footer class="flex justify-end gap-3 p-6 pt-0 border-t border-border">
+            <button type="button" class="btn-outline" data-close-modal>Cancel</button>
+            <button type="submit" form="user-form" class="btn" id="user-form-submit">Save</button>
+        </footer>
+    </article>
+</dialog>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+const adminMetricsEndpoint = '/admin/metrics';
+const adminUsersEndpoint = '/admin/users';
+const adminStatusEndpoint = (id) => `/admin/users/${id}/status`;
+const adminUpdateEndpoint = (id) => `/admin/users/${id}`;
+
+const metricsState = {{ metrics | tojson }};
+const usersState = {{ users | tojson }};
+const rolesState = {{ roles | tojson }};
+
+const metricElements = document.querySelectorAll('[data-metric]');
+const usersTableBody = document.querySelector('#users-table tbody');
+const recentLoginsList = document.getElementById('recent-logins');
+const recentActivitiesList = document.getElementById('recent-activities');
+const userModal = document.getElementById('user-modal');
+const userForm = document.getElementById('user-form');
+const userFormSubmit = document.getElementById('user-form-submit');
+const userFormError = document.getElementById('user-form-error');
+const openCreateUserButton = document.getElementById('open-create-user');
+const refreshMetricsButton = document.getElementById('refresh-metrics');
+const refreshUsersButton = document.getElementById('refresh-users');
+const passwordHint = document.querySelector('[data-password-hint]');
+let editingUserId = null;
+
+function formatDate(value) {
+    if (!value) return 'Never';
+    const date = new Date(value);
+    return date.toLocaleString();
+}
+
+function badgeMarkup(label, style = '') {
+    return `<span class="badge ${style}">${label}</span>`;
+}
+
+function renderMetrics(metrics) {
+    metricElements.forEach(element => {
+        const key = element.dataset.metric;
+        if (key && metrics[key] !== undefined) {
+            element.textContent = key.includes('generated_at') ? formatDate(metrics[key]) : metrics[key];
+        }
+    });
+
+    if (recentLoginsList) {
+        recentLoginsList.innerHTML = metrics.recent_logins.length
+            ? metrics.recent_logins.map(login => `
+                <li class="flex items-center justify-between text-sm">
+                    <div>
+                        <p class="font-medium text-card-foreground">${login.full_name}</p>
+                        <p class="text-muted-foreground">${login.role_label || ''}</p>
+                    </div>
+                    <span class="text-xs text-muted-foreground">${formatDate(login.last_login)}</span>
+                </li>
+            `).join('')
+            : '<li class="text-sm text-muted-foreground">No recent logins.</li>';
+    }
+
+    if (recentActivitiesList) {
+        recentActivitiesList.innerHTML = metrics.recent_activities.length
+            ? metrics.recent_activities.map(activity => `
+                <li class="text-sm">
+                    <p class="font-medium text-card-foreground">${activity.title}</p>
+                    <p class="text-muted-foreground text-xs">${activity.type || ''} &bull; ${activity.user || ''} &bull; ${formatDate(activity.created_at)}</p>
+                </li>
+            `).join('')
+            : '<li class="text-sm text-muted-foreground">No recent activities.</li>';
+    }
+}
+
+function renderUsers(users) {
+    if (!usersTableBody) return;
+    if (!users.length) {
+        usersTableBody.innerHTML = '<tr><td colspan="6" class="text-center py-10 text-muted-foreground">No users found.</td></tr>';
+        return;
+    }
+
+    usersTableBody.innerHTML = users.map(user => `
+        <tr data-user-row="${user.id}">
+            <td class="font-medium">${user.full_name}</td>
+            <td>${user.email}</td>
+            <td>${badgeMarkup(user.role_label || user.role || '', '')}</td>
+            <td>${badgeMarkup(user.is_active ? 'Active' : 'Inactive', user.is_active ? 'badge-success' : 'badge-destructive')}</td>
+            <td>${formatDate(user.last_login)}</td>
+            <td class="text-right">
+                <div class="flex justify-end gap-2">
+                    <button type="button" class="btn-icon-outline" data-action="edit" data-user-id="${user.id}" title="Edit user">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                        </svg>
+                    </button>
+                    <button type="button" class="btn-icon-outline" data-action="toggle" data-user-id="${user.id}" title="Toggle active state">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 12H6"></path>
+                        </svg>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function openModal() {
+    if (typeof userModal.showModal === 'function') {
+        userModal.showModal();
+    } else {
+        userModal.setAttribute('open', '');
+    }
+}
+
+function closeModal() {
+    if (typeof userModal.close === 'function') {
+        userModal.close();
+    } else {
+        userModal.removeAttribute('open');
+    }
+    editingUserId = null;
+    userForm.reset();
+    userFormError.classList.add('hidden');
+    userFormError.textContent = '';
+    userFormSubmit.textContent = 'Save';
+    document.getElementById('user-modal-title').textContent = 'Create User';
+    passwordHint.classList.remove('hidden');
+    document.getElementById('user-password').required = true;
+    document.getElementById('user-role').value = '';
+}
+
+function populateForm(user) {
+    document.getElementById('user-first-name').value = user.first_name;
+    document.getElementById('user-last-name').value = user.last_name;
+    document.getElementById('user-username').value = user.username;
+    document.getElementById('user-email').value = user.email;
+    document.getElementById('user-role').value = user.role;
+    document.getElementById('user-status').value = user.is_active ? 'true' : 'false';
+    document.getElementById('user-password').value = '';
+    document.getElementById('user-password').required = false;
+    passwordHint.classList.remove('hidden');
+    passwordHint.textContent = 'Leave blank to keep existing password.';
+}
+
+async function fetchMetrics() {
+    refreshMetricsButton?.classList.add('btn-loading');
+    try {
+        const response = await fetch(adminMetricsEndpoint);
+        if (!response.ok) throw new Error('Unable to fetch metrics');
+        const data = await response.json();
+        Object.assign(metricsState, data);
+        renderMetrics(metricsState);
+    } catch (error) {
+        alert('Failed to refresh metrics.');
+    } finally {
+        refreshMetricsButton?.classList.remove('btn-loading');
+    }
+}
+
+async function fetchUsers() {
+    refreshUsersButton?.classList.add('btn-loading');
+    try {
+        const response = await fetch(adminUsersEndpoint);
+        if (!response.ok) throw new Error('Unable to fetch users');
+        const data = await response.json();
+        usersState.splice(0, usersState.length, ...data.users);
+        renderUsers(usersState);
+    } catch (error) {
+        alert('Failed to refresh users.');
+    } finally {
+        refreshUsersButton?.classList.remove('btn-loading');
+    }
+}
+
+async function toggleUserStatus(userId) {
+    const user = usersState.find(item => item.id === userId);
+    if (!user) return;
+    const nextStatus = !user.is_active;
+    try {
+        const response = await fetch(adminStatusEndpoint(userId), {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ is_active: nextStatus })
+        });
+        if (!response.ok) throw new Error('Failed to update status');
+        const data = await response.json();
+        Object.assign(user, data.user);
+        renderUsers(usersState);
+    } catch (error) {
+        alert('Unable to update user status.');
+    }
+}
+
+async function submitUserForm(event) {
+    event.preventDefault();
+    userFormError.classList.add('hidden');
+    userFormError.textContent = '';
+
+    const formData = new FormData(userForm);
+    const payload = Object.fromEntries(formData.entries());
+
+    payload.is_active = payload.is_active !== 'false';
+    if (!editingUserId && !payload.password) {
+        userFormError.textContent = 'Password is required for new users.';
+        userFormError.classList.remove('hidden');
+        return;
+    }
+    if (!payload.password) delete payload.password;
+
+    const endpoint = editingUserId ? adminUpdateEndpoint(editingUserId) : adminUsersEndpoint;
+    const method = editingUserId ? 'PUT' : 'POST';
+
+    userFormSubmit.disabled = true;
+    userFormSubmit.classList.add('btn-loading');
+    try {
+        const response = await fetch(endpoint, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Unable to save user.');
+
+        if (editingUserId) {
+            const index = usersState.findIndex(item => item.id === editingUserId);
+            if (index !== -1) usersState[index] = data.user;
+        } else {
+            usersState.unshift(data.user);
+        }
+        renderUsers(usersState);
+        closeModal();
+    } catch (error) {
+        userFormError.textContent = error.message;
+        userFormError.classList.remove('hidden');
+    } finally {
+        userFormSubmit.disabled = false;
+        userFormSubmit.classList.remove('btn-loading');
+    }
+}
+
+function setupEventListeners() {
+    openCreateUserButton?.addEventListener('click', () => {
+        editingUserId = null;
+        document.getElementById('user-modal-title').textContent = 'Create User';
+        document.getElementById('user-password').required = true;
+        passwordHint.classList.remove('hidden');
+        passwordHint.textContent = 'Required for new users. Leave blank to keep existing password.';
+        openModal();
+    });
+
+    document.querySelectorAll('[data-close-modal]').forEach(button => {
+        button.addEventListener('click', closeModal);
+    });
+
+    userModal.addEventListener('cancel', event => {
+        event.preventDefault();
+        closeModal();
+    });
+
+    refreshMetricsButton?.addEventListener('click', fetchMetrics);
+    refreshUsersButton?.addEventListener('click', fetchUsers);
+    userForm.addEventListener('submit', submitUserForm);
+
+    usersTableBody?.addEventListener('click', event => {
+        const button = event.target.closest('button[data-action]');
+        if (!button) return;
+        const userId = Number(button.dataset.userId);
+        const action = button.dataset.action;
+        const user = usersState.find(item => item.id === userId);
+        if (!user) return;
+
+        if (action === 'edit') {
+            editingUserId = userId;
+            document.getElementById('user-modal-title').textContent = 'Edit User';
+            userFormSubmit.textContent = 'Update';
+            populateForm(user);
+            openModal();
+        }
+
+        if (action === 'toggle') {
+            toggleUserStatus(userId);
+        }
+    });
+}
+
+renderMetrics(metricsState);
+renderUsers(usersState);
+setupEventListeners();
+</script>
+{% endblock %}

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Server Error - CRM System</title>
+
+    <!-- Basecoat CSS CDN Setup -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/basecoat-css@0.3.1/dist/basecoat.cdn.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/basecoat-css@0.3.1/dist/js/all.min.js" defer></script>
+</head>
+<body class="bg-background text-foreground">
+    <!-- Theme Switcher Script -->
+    <script>
+    (() => {
+      try {
+        const stored = localStorage.getItem('themeMode');
+        if (stored ? stored === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches) {
+          document.documentElement.classList.add('dark');
+        }
+      } catch (_) {}
+
+      document.addEventListener('basecoat:theme', (e) => {
+        const mode = e.detail?.mode || (document.documentElement.classList.contains('dark') ? 'light' : 'dark');
+        if (mode === 'dark') {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+        localStorage.setItem('themeMode', mode);
+      });
+    })();
+    </script>
+
+    <div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-md w-full text-center">
+            <div class="mb-8">
+                <svg class="mx-auto h-24 w-24 text-destructive" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                </svg>
+            </div>
+
+            <h1 class="text-4xl font-bold text-card-foreground mb-4">500</h1>
+            <h2 class="text-xl font-semibold text-card-foreground mb-2">Server Error</h2>
+            <p class="text-muted-foreground mb-8">
+                Something went wrong on our end. Please try again later.
+            </p>
+
+            <div class="space-y-4">
+                <a href="{{ url_for('main.dashboard') }}" class="btn-primary">
+                    Go to Dashboard
+                </a>
+                <br>
+                <button onclick="location.reload()" class="btn-outline">
+                    Try Again
+                </button>
+            </div>
+
+            <!-- Theme Toggle -->
+            <div class="mt-8">
+                <button onclick="document.dispatchEvent(new CustomEvent('basecoat:theme'))"
+                        class="btn-outline" title="Toggle theme">
+                    <svg class="w-4 h-4 dark:hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                    </svg>
+                    <svg class="w-4 h-4 hidden dark:block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}Sign In - {{ super() }}{% endblock %}
+
+{% block page_title %}Sign In{% endblock %}
+
+{% block content %}
+<div class="min-h-[calc(100vh-8rem)] flex items-center justify-center">
+    <div class="w-full max-w-md space-y-8">
+        <!-- Header -->
+        <div class="text-center">
+            <h1 class="text-3xl font-bold text-card-foreground mb-2">Welcome Back</h1>
+            <p class="text-muted-foreground">Sign in to your CRM account</p>
+        </div>
+
+        <!-- Login Form -->
+        <div class="card">
+            <form class="space-y-6" method="POST">
+                {{ form.hidden_tag() }}
+
+                <!-- Email Field -->
+                <div class="grid gap-2">
+                    <label for="email" class="label">
+                        {{ form.email.label.text }}
+                        {% if form.email.flags.required %}<span class="text-destructive">*</span>{% endif %}
+                    </label>
+                    {{ form.email(class="input", id="email", type="email", autocomplete="email", placeholder="Enter your email") }}
+                    {% if form.email.errors %}
+                    <div class="text-sm text-destructive">
+                        {% for error in form.email.errors %}
+                        <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Password Field -->
+                <div class="grid gap-2">
+                    <label for="password" class="label">
+                        {{ form.password.label.text }}
+                        {% if form.password.flags.required %}<span class="text-destructive">*</span>{% endif %}
+                    </label>
+                    {{ form.password(class="input", id="password", type="password", autocomplete="current-password", placeholder="Enter your password") }}
+                    {% if form.password.errors %}
+                    <div class="text-sm text-destructive">
+                        {% for error in form.password.errors %}
+                        <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Remember Me -->
+                <div class="flex items-center space-x-2">
+                    <label class="checkbox">
+                        {{ form.remember_me() }}
+                        <span class="checkmark"></span>
+                        {{ form.remember_me.label.text }}
+                    </label>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" class="btn w-full">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
+                    </svg>
+                    {{ form.submit.label.text }}
+                </button>
+
+                <!-- Flash Messages -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        <div class="space-y-2">
+                            {% for category, message in messages %}
+                                <div class="alert {% if category == 'error' %}alert-destructive{% elif category == 'success' %}alert-success{% else %}alert{% endif %}">
+                                    <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        {% if category == 'error' %}
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                                        {% elif category == 'success' %}
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        {% else %}
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        {% endif %}
+                                    </svg>
+                                    <h2 class="font-medium">{{ message }}</h2>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                {% endwith %}
+            </form>
+        </div>
+
+        <!-- Demo Credentials -->
+        <div class="card">
+            <header class="pb-2">
+                <h3 class="text-sm font-medium text-card-foreground">Demo Credentials</h3>
+            </header>
+            <section class="space-y-2 text-sm">
+                <div class="flex justify-between">
+                    <span class="text-muted-foreground">Admin:</span>
+                    <code class="bg-muted px-2 py-1 rounded text-xs">admin@demo.com / admin123</code>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-muted-foreground">Manager:</span>
+                    <code class="bg-muted px-2 py-1 rounded text-xs">manager@demo.com / manager123</code>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-muted-foreground">Employee:</span>
+                    <code class="bg-muted px-2 py-1 rounded text-xs">employee@demo.com / employee123</code>
+                </div>
+            </section>
+        </div>
+    </div>
+</div>
+{% endblock %}

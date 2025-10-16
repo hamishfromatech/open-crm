@@ -3,7 +3,7 @@ from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 import os
 from datetime import datetime
-from app import db, documents
+from app import db
 from app.models import Customer, Contact, Lead, Opportunity, Activity, Document, RoleEnum
 from app.routes.main import role_required
 
@@ -221,6 +221,28 @@ def delete_contact(id):
 
     return jsonify({'message': 'Contact deleted successfully'})
 
+@api_bp.route('/leads', methods=['GET'])
+@login_required
+def get_leads():
+    """Get all leads"""
+    leads = Lead.query.all()
+    return jsonify([{
+        'id': lead.id,
+        'title': lead.title,
+        'description': lead.description,
+        'source': lead.source,
+        'status': lead.status,
+        'value': lead.value,
+        'probability': lead.probability,
+        'customer': lead.customer.name if lead.customer else None,
+        'customer_id': lead.customer_id,
+        'assigned_user': lead.assigned_user.get_full_name() if lead.assigned_user else None,
+        'assigned_user_id': lead.assigned_user_id,
+        'expected_close_date': lead.expected_close_date.isoformat() if lead.expected_close_date else None,
+        'created_at': lead.created_at.isoformat() if getattr(lead, 'created_at', None) else None,
+        'updated_at': lead.updated_at.isoformat() if getattr(lead, 'updated_at', None) else None
+    } for lead in leads])
+
 @api_bp.route('/leads', methods=['POST'])
 @login_required
 @role_required(RoleEnum.ADMIN.value, RoleEnum.MANAGER.value, RoleEnum.EMPLOYEE.value)
@@ -275,6 +297,30 @@ def delete_lead(id):
     db.session.commit()
 
     return jsonify({'message': 'Lead deleted successfully'})
+
+@api_bp.route('/opportunities', methods=['GET'])
+@login_required
+def get_opportunities():
+    """Get all opportunities"""
+    opportunities = Opportunity.query.all()
+    return jsonify([{
+        'id': opportunity.id,
+        'name': opportunity.name,
+        'description': opportunity.description,
+        'amount': opportunity.amount,
+        'probability': opportunity.probability,
+        'status': opportunity.status,
+        'customer': opportunity.customer.name if opportunity.customer else None,
+        'customer_id': opportunity.customer_id,
+        'lead_id': opportunity.lead_id,
+        'lead': opportunity.lead.name if opportunity.lead else None,
+        'assigned_user': opportunity.assigned_user.get_full_name() if opportunity.assigned_user else None,
+        'assigned_user_id': opportunity.assigned_user_id,
+        'expected_close_date': opportunity.expected_close_date.isoformat() if opportunity.expected_close_date else None,
+        'created_at': opportunity.created_at.isoformat() if getattr(opportunity, 'created_at', None) else None,
+        'updated_at': opportunity.updated_at.isoformat() if getattr(opportunity, 'updated_at', None) else None,
+        'closed_date': opportunity.closed_date.isoformat() if getattr(opportunity, 'closed_date', None) else None
+    } for opportunity in opportunities])
 
 @api_bp.route('/opportunities', methods=['POST'])
 @login_required

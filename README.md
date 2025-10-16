@@ -19,8 +19,8 @@ A comprehensive Customer Relationship Management (CRM) system built with Flask, 
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
-   cd crm
+   git clone https://github.com/hamishfromatech/open-crm.git
+   cd open-crm
    ```
 
 2. **Install dependencies**

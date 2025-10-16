@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}CRM System{% endblock %}</title>
+
+    <!-- Basecoat CSS CDN Setup -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/basecoat-css@0.3.1/dist/basecoat.cdn.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/basecoat-css@0.3.1/dist/js/all.min.js" defer></script>
+
+    <!-- Custom styles -->
+    <style>
+        /* Mobile Navigation Dropdown */
+        .mobile-nav-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            z-index: 1000;
+            display: none;
+            margin-top: 0.5rem;
+            min-width: 200px;
+        }
+
+        .dark .mobile-nav-dropdown {
+            background: #1f2937;
+            border-color: #374151;
+        }
+
+        .mobile-nav-dropdown.show {
+            display: block;
+        }
+
+        .mobile-nav-dropdown a {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #6b7280;
+            border-radius: 0.375rem;
+            transition: all 0.2s ease-in-out;
+            margin: 0.25rem;
+            text-decoration: none;
+        }
+
+        .mobile-nav-dropdown a:hover {
+            background: #f3f4f6;
+            color: #111827;
+        }
+
+        .dark .mobile-nav-dropdown a {
+            color: #d1d5db;
+        }
+
+        .dark .mobile-nav-dropdown a:hover {
+            background: #374151;
+            color: #f9fafb;
+        }
+
+        /* Header responsive adjustments */
+        @media (max-width: 767px) {
+            .header-nav {
+                position: relative;
+            }
+
+            /* Hide desktop navigation on mobile */
+            .header-nav nav {
+                display: none !important;
+            }
+
+            /* Show mobile dropdown when toggled */
+            .header-nav.mobile-open .mobile-nav-dropdown {
+                display: block;
+            }
+        }
+
+        /* Toast container for notifications */
+        #toast-container {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            z-index: 1001;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        /* Mobile backdrop for navigation */
+        .mobile-nav-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+            display: none;
+        }
+
+        .mobile-nav-backdrop.show {
+            display: block;
+        }
+    </style>
+</head>
+<body class="bg-background text-foreground">
+    <!-- Theme Switcher Script -->
+    <script>
+    (() => {
+      try {
+        const stored = localStorage.getItem('themeMode');
+        if (stored ? stored === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches) {
+          document.documentElement.classList.add('dark');
+        }
+      } catch (_) {}
+
+      document.addEventListener('basecoat:theme', (e) => {
+        const mode = e.detail?.mode || (document.documentElement.classList.contains('dark') ? 'light' : 'dark');
+        if (mode === 'dark') {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+        localStorage.setItem('themeMode', mode);
+      });
+    })();
+    </script>
+
+    <div class="flex h-screen">
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col overflow-hidden">
+            <!-- Header -->
+            <header class="bg-card border-b border-border p-4 shadow-sm relative">
+                <div class="header-nav flex items-center justify-between">
+                    <div class="flex items-center">
+                        <!-- Logo/Brand -->
+                        <div class="mr-6">
+                            <h1 class="text-xl font-bold text-card-foreground">CRM System</h1>
+                        </div>
+
+                        <!-- Navigation -->
+                        <nav class="hidden md:flex space-x-1">
+                            <a href="{{ url_for('main.dashboard') }}" class="flex items-center px-3 py-2 text-sm font-medium rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors {% if request.endpoint == 'main.dashboard' %}bg-primary text-primary-foreground{% else %}text-muted-foreground{% endif %}" title="Dashboard">
+                                <svg class="mr-2 h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5a2 2 0 012-2h2a2 2 0 012 2v0M8 5a2 2 0 012 2h2a2 2 0 012-2v0"></path>
+                                </svg>
+                                <span>Dashboard</span>
+                            </a>
+                            <a href="{{ url_for('main.customers') }}" class="flex items-center px-3 py-2 text-sm font-medium rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors {% if request.endpoint == 'main.customers' %}bg-primary text-primary-foreground{% else %}text-muted-foreground{% endif %}" title="Customers">
+                                <svg class="mr-2 h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+                                </svg>
+                                <span>Customers</span>
+                            </a>
+                            <a href="{{ url_for('main.leads') }}" class="flex items-center px-3 py-2 text-sm font-medium rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors {% if request.endpoint == 'main.leads' %}bg-primary text-primary-foreground{% else %}text-muted-foreground{% endif %}" title="Leads">
+                                <svg class="mr-2 h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                </svg>
+                                <span>Leads</span>
+                            </a>
+                            <a href="{{ url_for('main.opportunities') }}" class="flex items-center px-3 py-2 text-sm font-medium rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors {% if request.endpoint == 'main.opportunities' %}bg-primary text-primary-foreground{% else %}text-muted-foreground{% endif %}" title="Opportunities">
+                                <svg class="mr-2 h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                                </svg>
+                                <span>Opportunities</span>
+                            </a>
+                            <a href="{{ url_for('main.activities') }}" class="flex items-center px-3 py-2 text-sm font-medium rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors {% if request.endpoint == 'main.activities' %}bg-primary text-primary-foreground{% else %}text-muted-foreground{% endif %}" title="Activities">
+                                <svg class="mr-2 h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <span>Activities</span>
+                            </a>
+                            {% if current_user.is_authenticated and current_user.is_admin %}
+                            <a href="{{ url_for('admin_panel.dashboard') }}" class="flex items-center px-3 py-2 text-sm font-medium rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors {% if request.endpoint == 'admin_panel.dashboard' %}bg-primary text-primary-foreground{% else %}text-muted-foreground{% endif %}" title="Admin Dashboard">
+                                <svg class="mr-2 h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0h6"></path>
+                                </svg>
+                                <span>Admin</span>
+                            </a>
+                            {% endif %}
+                            <a href="{{ url_for('auth.profile') }}" class="flex items-center px-3 py-2 text-sm font-medium rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors {% if request.endpoint == 'auth.profile' %}bg-primary text-primary-foreground{% else %}text-muted-foreground{% endif %}" title="Profile">
+                                <svg class="mr-2 h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A7 7 0 0112 15a7 7 0 016.879 2.804M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                </svg>
+                                <span>Profile</span>
+                            </a>
+                        </nav>
+
+                        <!-- Mobile menu button -->
+                        <button id="mobile-menu-button" type="button" class="md:hidden p-2 rounded-lg hover:bg-accent transition-colors" title="Toggle Menu" aria-expanded="false" aria-controls="mobile-navigation" aria-label="Toggle navigation">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div class="flex items-center space-x-3">
+                        <!-- Theme Toggle -->
+                        <button onclick="document.dispatchEvent(new CustomEvent('basecoat:theme'))"
+                                class="btn-icon-outline" title="Toggle theme">
+                            <svg class="w-4 h-4 dark:hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                            </svg>
+                            <svg class="w-4 h-4 hidden dark:block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707" />
+                            </svg>
+                        </button>
+
+                        <!-- Logout (only show for authenticated users) -->
+                        {% if current_user.is_authenticated %}
+                        <a href="{{ url_for('auth.logout') }}" class="btn-outline">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                            </svg>
+                            Logout
+                        </a>
+                        {% endif %}
+                    </div>
+                    <!-- Mobile Navigation Dropdown -->
+                    <div id="mobile-navigation" class="mobile-nav-dropdown md:hidden" role="menu" aria-hidden="true">
+                        <a href="{{ url_for('main.dashboard') }}" role="menuitem" class="flex items-center {% if request.endpoint == 'main.dashboard' %}bg-primary text-primary-foreground{% else %}text-muted-foreground hover:bg-accent hover:text-accent-foreground{% endif %}">
+                            <svg class="mr-3 h-5 w-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5a2 2 0 012-2h2a2 2 0 012 2v0M8 5a2 2 0 012 2h2a2 2 0 012-2v0"></path>
+                            </svg>
+                            <span>Dashboard</span>
+                        </a>
+                        <a href="{{ url_for('main.customers') }}" role="menuitem" class="flex items-center {% if request.endpoint == 'main.customers' %}bg-primary text-primary-foreground{% else %}text-muted-foreground hover:bg-accent hover:text-accent-foreground{% endif %}">
+                            <svg class="mr-3 h-5 w-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+                            </svg>
+                            <span>Customers</span>
+                        </a>
+                        <a href="{{ url_for('main.leads') }}" role="menuitem" class="flex items-center {% if request.endpoint == 'main.leads' %}bg-primary text-primary-foreground{% else %}text-muted-foreground hover:bg-accent hover:text-accent-foreground{% endif %}">
+                            <svg class="mr-3 h-5 w-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            <span>Leads</span>
+                        </a>
+                        <a href="{{ url_for('main.opportunities') }}" role="menuitem" class="flex items-center {% if request.endpoint == 'main.opportunities' %}bg-primary text-primary-foreground{% else %}text-muted-foreground hover:bg-accent hover:text-accent-foreground{% endif %}">
+                            <svg class="mr-3 h-5 w-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                            </svg>
+                            <span>Opportunities</span>
+                        </a>
+                        <a href="{{ url_for('main.activities') }}" role="menuitem" class="flex items-center {% if request.endpoint == 'main.activities' %}bg-primary text-primary-foreground{% else %}text-muted-foreground hover:bg-accent hover:text-accent-foreground{% endif %}">
+                            <svg class="mr-3 h-5 w-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <span>Activities</span>
+                        </a>
+                        {% if current_user.is_authenticated and current_user.is_admin %}
+                        <a href="{{ url_for('admin_panel.dashboard') }}" role="menuitem" class="flex items-center {% if request.endpoint == 'admin_panel.dashboard' %}bg-primary text-primary-foreground{% else %}text-muted-foreground hover:bg-accent hover:text-accent-foreground{% endif %}">
+                            <svg class="mr-3 h-5 w-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0h6"></path>
+                            </svg>
+                            <span>Admin</span>
+                        </a>
+                        {% endif %}
+                        <a href="{{ url_for('auth.profile') }}" role="menuitem" class="flex items-center {% if request.endpoint == 'auth.profile' %}bg-primary text-primary-foreground{% else %}text-muted-foreground hover:bg-accent hover:text-accent-foreground{% endif %}">
+                            <svg class="mr-3 h-5 w-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A7 7 0 0112 15a7 7 0 016.879 2.804M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            </svg>
+                            <span>Profile</span>
+                        </a>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Page Content -->
+            <main class="flex-1 overflow-auto p-6 bg-muted/20">
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+    <!-- Mobile Navigation Backdrop -->
+    <div id="mobile-nav-backdrop" class="mobile-nav-backdrop md:hidden"></div>
+
+    <!-- Mobile Sidebar Overlay (backdrop) -->
+    <div id="mobile-sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 md:hidden hidden"></div>
+
+    <script>
+        // Mobile navigation toggle functionality
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        const mobileNavBackdrop = document.getElementById('mobile-nav-backdrop');
+        const mobileNavDropdown = document.getElementById('mobile-navigation');
+        const headerNav = document.querySelector('.header-nav');
+
+        // Toggle mobile navigation dropdown
+        function setMobileNavState(isOpen) {
+            headerNav.classList.toggle('mobile-open', isOpen);
+            mobileNavBackdrop?.classList.toggle('show', isOpen);
+            mobileNavDropdown?.classList.toggle('show', isOpen);
+
+            if (mobileMenuButton) {
+                mobileMenuButton.setAttribute('aria-expanded', String(isOpen));
+            }
+
+            if (mobileNavDropdown) {
+                mobileNavDropdown.setAttribute('aria-hidden', String(!isOpen));
+            }
+
+            document.body.style.overflow = isOpen ? 'hidden' : '';
+        }
+
+        function toggleMobileNav() {
+            const isOpen = !headerNav.classList.contains('mobile-open');
+            setMobileNavState(isOpen);
+        }
+
+        // Close mobile navigation when clicking backdrop
+        function closeMobileNav() {
+            setMobileNavState(false);
+        }
+
+        // Initialize mobile navigation functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            // Mobile menu button event listener
+            if (mobileMenuButton) {
+                mobileMenuButton.addEventListener('click', toggleMobileNav);
+            }
+
+            // Mobile backdrop click event listener
+            if (mobileNavBackdrop) {
+                mobileNavBackdrop.addEventListener('click', closeMobileNav);
+            }
+
+            // Close mobile nav when clicking on a navigation link
+            const mobileNavLinks = document.querySelectorAll('.mobile-nav-dropdown a');
+            mobileNavLinks.forEach(link => {
+                link.addEventListener('click', closeMobileNav);
+            });
+
+            // Close mobile nav on window resize to desktop
+            window.addEventListener('resize', function() {
+                if (window.innerWidth >= 768) {
+                    closeMobileNav();
+                }
+            });
+
+            // Close mobile nav on escape key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && headerNav.classList.contains('mobile-open')) {
+                    closeMobileNav();
+                }
+            });
+        });
+
+        // Toast notification system
+        function showToast(type, message) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+
+            toast.className = `toast toast-${type} flex items-center gap-3 p-4 rounded-lg shadow-lg border`;
+            toast.innerHTML = `
+                <svg class="w-5 h-5 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span class="flex-1">${message}</span>
+                <button onclick="this.parentElement.remove()" class="btn-icon ml-auto">
+                    <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            `;
+
+            container.appendChild(toast);
+
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                if (toast.parentElement) {
+                    toast.remove();
+                }
+            }, 5000);
+        }
+    </script>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

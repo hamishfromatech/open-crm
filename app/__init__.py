@@ -2,9 +2,9 @@ from flask import Flask, jsonify, request, render_template
 from flask_sqlalchemy import SQLAlchemy
 from flask_admin import Admin
 from flask_login import LoginManager
-from flask_uploads import UploadSet, configure_uploads, IMAGES, TEXT, DOCUMENTS
 import os
 import logging
+from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -18,9 +18,6 @@ login_manager.login_view = 'auth.login'
 login_manager.login_message = 'Please log in to access this page.'
 login_manager.login_message_category = 'info'
 
-# Configure file uploads
-documents = UploadSet('documents', DOCUMENTS + TEXT + IMAGES)
-
 def create_app(config_class='config.Config'):
     """Application factory pattern"""
     app = Flask(__name__)
@@ -30,9 +27,12 @@ def create_app(config_class='config.Config'):
     db.init_app(app)
     admin.init_app(app)
     login_manager.init_app(app)
-
-    # Configure uploads
-    configure_uploads(app, documents)
+    
+    # User loader for Flask-Login
+    @login_manager.user_loader
+    def load_user(user_id):
+        from app.models import User
+        return User.query.get(int(user_id))
 
     # Create upload folder if it doesn't exist
     upload_folder = app.config['UPLOAD_FOLDER']
@@ -64,14 +64,12 @@ def create_app(config_class='config.Config'):
     from app.routes.auth import auth_bp
     from app.routes.main import main_bp
     from app.routes.api import api_bp
+    from app.routes.admin import admin_bp
 
     app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(main_bp)
     app.register_blueprint(api_bp, url_prefix='/api')
-
-    # Initialize admin views
-    from app.admin import init_admin_views
-    init_admin_views(admin)
+    app.register_blueprint(admin_bp)
 
     # Add error handlers
     @app.errorhandler(404)
@@ -98,5 +96,11 @@ def create_app(config_class='config.Config'):
     # Create database tables
     with app.app_context():
         db.create_all()
+
+        # Initialize admin views after database is created
+        # Store reference to avoid naming collision with app.admin module
+        admin_instance = admin
+        from app.admin import init_admin_views
+        init_admin_views(admin_instance)
 
     return app

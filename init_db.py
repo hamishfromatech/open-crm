@@ -29,15 +29,15 @@ def init_database():
         if not admin_user:
             admin_user = User(
                 username='admin',
-                email='admin@crm.com',
+                email='admin@atech.industries',
                 first_name='System',
                 last_name='Administrator',
                 role=roles[RoleEnum.ADMIN.value],
                 is_active=True
             )
-            admin_user.set_password('admin123')
+            admin_user.set_password('admin')
             db.session.add(admin_user)
-            print('Created admin user: admin/admin123')
+            print('Created admin user: admin/admin')
 
         # Create sample manager and employee users
         manager_user = User.query.filter_by(username='manager').first()

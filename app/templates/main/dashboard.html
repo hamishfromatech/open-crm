@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Welcome Section -->
+    <div class="card">
+        <header class="pb-4">
+            <h1 class="text-2xl font-bold text-card-foreground">
+                Welcome back, {{ current_user.get_full_name() if current_user.is_authenticated else 'User' }}!
+            </h1>
+            <p class="text-muted-foreground mt-1">
+                Here's what's happening with your CRM today.
+            </p>
+        </header>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <!-- Customers Card -->
+        <div class="card hover:shadow-lg transition-shadow">
+            <header class="pb-3">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-10 h-10 bg-blue-500 text-white rounded-lg flex items-center justify-center">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-muted-foreground">Total Customers</p>
+                        <p class="text-2xl font-bold text-card-foreground" id="customer-count">{{ customer_count or 0 }}</p>
+                    </div>
+                </div>
+            </header>
+        </div>
+
+        <!-- Leads Card -->
+        <div class="card hover:shadow-lg transition-shadow">
+            <header class="pb-3">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-10 h-10 bg-green-500 text-white rounded-lg flex items-center justify-center">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-muted-foreground">Active Leads</p>
+                        <p class="text-2xl font-bold text-card-foreground" id="lead-count">{{ lead_count or 0 }}</p>
+                    </div>
+                </div>
+            </header>
+        </div>
+
+        <!-- Opportunities Card -->
+        <div class="card hover:shadow-lg transition-shadow">
+            <header class="pb-3">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-10 h-10 bg-amber-500 text-white rounded-lg flex items-center justify-center">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-muted-foreground">Opportunities</p>
+                        <p class="text-2xl font-bold text-card-foreground" id="opportunity-count">{{ opportunity_count or 0 }}</p>
+                    </div>
+                </div>
+            </header>
+        </div>
+
+        <!-- Pipeline Value Card -->
+        <div class="card hover:shadow-lg transition-shadow">
+            <header class="pb-3">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-10 h-10 bg-purple-500 text-white rounded-lg flex items-center justify-center">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-muted-foreground">Pipeline Value</p>
+                        <p class="text-2xl font-bold text-card-foreground" id="pipeline-value">$0</p>
+                    </div>
+                </div>
+            </header>
+        </div>
+    </div>
+
+    <!-- Recent Activities and Quick Actions -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Recent Activities -->
+        <div class="card">
+            <header class="pb-4">
+                <h3 class="text-lg font-semibold text-card-foreground">Recent Activities</h3>
+            </header>
+            <section class="space-y-4">
+                {% if recent_activities %}
+                    {% for activity in recent_activities %}
+                    <div class="flex items-start space-x-3 p-3 rounded-lg hover:bg-accent/50 transition-colors">
+                        <div class="flex-shrink-0">
+                            <div class="w-8 h-8 bg-primary/10 text-primary rounded-full flex items-center justify-center">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-card-foreground">{{ activity.activity_type.title() }}</p>
+                            <p class="text-xs text-muted-foreground">{{ activity.created_at.strftime('%b %d, %Y at %I:%M %p') }}</p>
+                            {% if activity.customer %}
+                            <p class="text-xs text-muted-foreground">Customer: {{ activity.customer.name }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-8">
+                        <svg class="w-12 h-12 mx-auto text-muted-foreground mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <p class="text-muted-foreground">No recent activities</p>
+                    </div>
+                {% endif %}
+            </section>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card">
+            <header class="pb-4">
+                <h3 class="text-lg font-semibold text-card-foreground">Quick Actions</h3>
+            </header>
+            <section class="grid grid-cols-1 gap-3">
+                <a href="{{ url_for('main.customers') }}" class="btn-outline flex items-center justify-center p-4 hover:bg-accent hover:text-accent-foreground transition-colors">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                    Add Customer
+                </a>
+                <a href="{{ url_for('main.leads') }}" class="btn-outline flex items-center justify-center p-4 hover:bg-accent hover:text-accent-foreground transition-colors">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    Add Lead
+                </a>
+                <a href="{{ url_for('main.opportunities') }}" class="btn-outline flex items-center justify-center p-4 hover:bg-accent hover:text-accent-foreground transition-colors">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                    </svg>
+                    Add Opportunity
+                </a>
+                <a href="{{ url_for('main.activities') }}" class="btn-outline flex items-center justify-center p-4 hover:bg-accent hover:text-accent-foreground transition-colors">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    Log Activity
+                </a>
+            </section>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Load dashboard statistics
+    loadDashboardStats();
+
+    // Load recent activities
+    loadRecentActivities();
+});
+
+async function loadDashboardStats() {
+    try {
+        const response = await fetch('/api/dashboard/stats');
+        const data = await response.json();
+
+        document.getElementById('customer-count').textContent = data.customer_count;
+        document.getElementById('lead-count').textContent = data.lead_count;
+        document.getElementById('opportunity-count').textContent = data.opportunity_count;
+        document.getElementById('pipeline-value').textContent = '$' + data.total_opportunity_value.toLocaleString();
+    } catch (error) {
+        console.error('Error loading dashboard stats:', error);
+        showToast('error', 'Failed to load dashboard statistics');
+    }
+}
+
+async function loadRecentActivities() {
+    try {
+        const response = await fetch('/api/dashboard/recent-activities');
+        const activities = await response.json();
+
+        const container = document.getElementById('recent-activities');
+
+        if (activities.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-8">
+                    <svg class="w-12 h-12 mx-auto text-muted-foreground mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <p class="text-muted-foreground">No recent activities</p>
+                </div>
+            `;
+            return;
+        }
+
+        // Update the activities in the template instead of replacing with JS
+        // The template already shows activities from the backend
+    } catch (error) {
+        console.error('Error loading recent activities:', error);
+        showToast('error', 'Failed to load recent activities');
+    }
+}
+
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInHours = Math.floor((now - date) / (1000 * 60 * 60));
+
+    if (diffInHours < 1) {
+        return 'Just now';
+    } else if (diffInHours < 24) {
+        return `${diffInHours}h ago`;
+    } else {
+        return date.toLocaleDateString();
+    }
+}
+</script>
+{% endblock %}
