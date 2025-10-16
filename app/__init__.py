@@ -1,9 +1,10 @@
-from flask import Flask
+from flask import Flask, jsonify, request, render_template
 from flask_sqlalchemy import SQLAlchemy
 from flask_admin import Admin
 from flask_login import LoginManager
 from flask_uploads import UploadSet, configure_uploads, IMAGES, TEXT, DOCUMENTS
 import os
+import logging
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -38,6 +39,27 @@ def create_app(config_class='config.Config'):
     if not os.path.exists(upload_folder):
         os.makedirs(upload_folder)
 
+    # Set up logging
+    if not app.debug:
+        # Production logging
+        if not os.path.exists('logs'):
+            os.makedirs('logs')
+
+        from logging.handlers import RotatingFileHandler
+        file_handler = RotatingFileHandler('logs/crm.log', maxBytes=10240000, backupCount=10)
+        file_handler.setFormatter(logging.Formatter(
+            '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
+        ))
+        file_handler.setLevel(logging.INFO)
+        app.logger.addHandler(file_handler)
+        app.logger.setLevel(logging.INFO)
+        app.logger.info('CRM application startup')
+    else:
+        # Development logging
+        logging.basicConfig(level=logging.DEBUG)
+        app.logger.setLevel(logging.DEBUG)
+        app.logger.info('CRM application startup in debug mode')
+
     # Register blueprints
     from app.routes.auth import auth_bp
     from app.routes.main import main_bp
@@ -50,6 +72,28 @@ def create_app(config_class='config.Config'):
     # Initialize admin views
     from app.admin import init_admin_views
     init_admin_views(admin)
+
+    # Add error handlers
+    @app.errorhandler(404)
+    def not_found_error(error):
+        app.logger.warning(f'Page not found: {request.url}')
+        if request.is_json:
+            return jsonify({'error': 'Not found'}), 404
+        return render_template('errors/404.html'), 404
+
+    @app.errorhandler(500)
+    def internal_error(error):
+        app.logger.error(f'Internal server error: {error}')
+        if request.is_json:
+            return jsonify({'error': 'Internal server error'}), 500
+        return render_template('errors/500.html'), 500
+
+    @app.errorhandler(Exception)
+    def handle_exception(e):
+        app.logger.error(f'Unhandled exception: {e}')
+        if request.is_json:
+            return jsonify({'error': 'Internal server error'}), 500
+        return render_template('errors/500.html'), 500
 
     # Create database tables
     with app.app_context():

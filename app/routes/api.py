@@ -221,34 +221,115 @@ def delete_contact(id):
 
     return jsonify({'message': 'Contact deleted successfully'})
 
-@api_bp.route('/leads', methods=['GET'])
+@api_bp.route('/leads', methods=['POST'])
 @login_required
-def get_leads():
-    """Get all leads"""
-    leads = Lead.query.all()
-    return jsonify([{
-        'id': l.id,
-        'title': l.title,
-        'status': l.status.value,
-        'value': l.value,
-        'customer': l.customer.name if l.customer else None,
-        'assigned_user': l.assigned_user.get_full_name() if l.assigned_user else None
-    } for l in leads])
+@role_required(RoleEnum.ADMIN.value, RoleEnum.MANAGER.value, RoleEnum.EMPLOYEE.value)
+def create_lead():
+    """Create a new lead"""
+    data = request.get_json()
 
-@api_bp.route('/opportunities', methods=['GET'])
+    lead = Lead(
+        title=data['title'],
+        description=data.get('description'),
+        source=data.get('source'),
+        status=data.get('status', 'new'),
+        value=data.get('value'),
+        probability=data.get('probability', 0),
+        customer_id=data.get('customer_id'),
+        assigned_user_id=data.get('assigned_user_id'),
+        expected_close_date=datetime.fromisoformat(data['expected_close_date']) if data.get('expected_close_date') else None
+    )
+
+    db.session.add(lead)
+    db.session.commit()
+
+    return jsonify({'message': 'Lead created successfully', 'id': lead.id}), 201
+
+@api_bp.route('/leads/<int:id>', methods=['PUT'])
 @login_required
-def get_opportunities():
-    """Get all opportunities"""
-    opportunities = Opportunity.query.all()
-    return jsonify([{
-        'id': o.id,
-        'name': o.name,
-        'amount': o.amount,
-        'status': o.status.value,
-        'probability': o.probability,
-        'customer': o.customer.name if o.customer else None,
-        'assigned_user': o.assigned_user.get_full_name() if o.assigned_user else None
-    } for o in opportunities])
+@role_required(RoleEnum.ADMIN.value, RoleEnum.MANAGER.value, RoleEnum.EMPLOYEE.value)
+def update_lead(id):
+    """Update a lead"""
+    lead = Lead.query.get_or_404(id)
+    data = request.get_json()
+
+    lead.title = data.get('title', lead.title)
+    lead.description = data.get('description', lead.description)
+    lead.source = data.get('source', lead.source)
+    lead.status = data.get('status', lead.status)
+    lead.value = data.get('value', lead.value)
+    lead.probability = data.get('probability', lead.probability)
+    lead.expected_close_date = datetime.fromisoformat(data['expected_close_date']) if data.get('expected_close_date') else lead.expected_close_date
+
+    db.session.commit()
+
+    return jsonify({'message': 'Lead updated successfully'})
+
+@api_bp.route('/leads/<int:id>', methods=['DELETE'])
+@login_required
+@role_required(RoleEnum.ADMIN.value, RoleEnum.MANAGER.value)
+def delete_lead(id):
+    """Delete a lead"""
+    lead = Lead.query.get_or_404(id)
+    db.session.delete(lead)
+    db.session.commit()
+
+    return jsonify({'message': 'Lead deleted successfully'})
+
+@api_bp.route('/opportunities', methods=['POST'])
+@login_required
+@role_required(RoleEnum.ADMIN.value, RoleEnum.MANAGER.value, RoleEnum.EMPLOYEE.value)
+def create_opportunity():
+    """Create a new opportunity"""
+    data = request.get_json()
+
+    opportunity = Opportunity(
+        name=data['name'],
+        description=data.get('description'),
+        amount=data['amount'],
+        probability=data.get('probability', 0),
+        status=data.get('status', 'open'),
+        customer_id=data['customer_id'],
+        lead_id=data.get('lead_id'),
+        assigned_user_id=data.get('assigned_user_id'),
+        expected_close_date=datetime.fromisoformat(data['expected_close_date']) if data.get('expected_close_date') else None
+    )
+
+    db.session.add(opportunity)
+    db.session.commit()
+
+    return jsonify({'message': 'Opportunity created successfully', 'id': opportunity.id}), 201
+
+@api_bp.route('/opportunities/<int:id>', methods=['PUT'])
+@login_required
+@role_required(RoleEnum.ADMIN.value, RoleEnum.MANAGER.value, RoleEnum.EMPLOYEE.value)
+def update_opportunity(id):
+    """Update an opportunity"""
+    opportunity = Opportunity.query.get_or_404(id)
+    data = request.get_json()
+
+    opportunity.name = data.get('name', opportunity.name)
+    opportunity.description = data.get('description', opportunity.description)
+    opportunity.amount = data.get('amount', opportunity.amount)
+    opportunity.probability = data.get('probability', opportunity.probability)
+    opportunity.status = data.get('status', opportunity.status)
+    opportunity.expected_close_date = datetime.fromisoformat(data['expected_close_date']) if data.get('expected_close_date') else opportunity.expected_close_date
+    opportunity.closed_date = datetime.utcnow() if data.get('status') in ['won', 'lost'] and not opportunity.closed_date else opportunity.closed_date
+
+    db.session.commit()
+
+    return jsonify({'message': 'Opportunity updated successfully'})
+
+@api_bp.route('/opportunities/<int:id>', methods=['DELETE'])
+@login_required
+@role_required(RoleEnum.ADMIN.value, RoleEnum.MANAGER.value)
+def delete_opportunity(id):
+    """Delete an opportunity"""
+    opportunity = Opportunity.query.get_or_404(id)
+    db.session.delete(opportunity)
+    db.session.commit()
+
+    return jsonify({'message': 'Opportunity deleted successfully'})
 
 @api_bp.route('/activities', methods=['GET'])
 @login_required
@@ -284,11 +365,91 @@ def create_activity():
     db.session.add(activity)
     db.session.commit()
 
-    return jsonify({'message': 'Activity created successfully', 'id': activity.id}), 201
-
-# File serving endpoint
-@api_bp.route('/files/<filename>')
+@api_bp.route('/activities/<int:id>', methods=['PUT'])
 @login_required
-def get_file(filename):
-    """Serve uploaded files"""
-    return send_from_directory(current_app.config['UPLOAD_FOLDER'], filename)
+def update_activity(id):
+    """Update an activity"""
+    activity = Activity.query.get_or_404(id)
+
+    # Only allow user to update their own activities or admins/managers to update any
+    if not (current_user.is_admin or current_user.is_manager or activity.user_id == current_user.id):
+        return jsonify({'error': 'Permission denied'}), 403
+
+    data = request.get_json()
+
+    activity.title = data.get('title', activity.title)
+    activity.description = data.get('description', activity.description)
+    activity.activity_type = data.get('activity_type', activity.activity_type)
+    activity.due_date = datetime.fromisoformat(data['due_date']) if data.get('due_date') else activity.due_date
+    activity.completed = data.get('completed', activity.completed)
+
+    db.session.commit()
+
+    return jsonify({'message': 'Activity updated successfully'})
+
+@api_bp.route('/activities/<int:id>', methods=['DELETE'])
+@login_required
+def delete_activity(id):
+    """Delete an activity"""
+    activity = Activity.query.get_or_404(id)
+
+    # Only allow user to delete their own activities or admins/managers to delete any
+    if not (current_user.is_admin or current_user.is_manager or activity.user_id == current_user.id):
+        return jsonify({'error': 'Permission denied'}), 403
+
+    db.session.delete(activity)
+    db.session.commit()
+
+    return jsonify({'message': 'Activity deleted successfully'})
+
+# Dashboard API endpoints
+@api_bp.route('/dashboard/stats')
+@login_required
+def dashboard_stats():
+    """Get dashboard statistics"""
+    from sqlalchemy import func
+
+    # Filter based on role
+    if current_user.is_admin or current_user.is_manager:
+        customer_count = Customer.query.count()
+        lead_count = Lead.query.count()
+        opportunity_count = Opportunity.query.count()
+        total_opportunity_value = db.session.query(func.sum(Opportunity.amount)).scalar() or 0
+    else:
+        customer_count = Customer.query.filter_by(assigned_user_id=current_user.id).count()
+        lead_count = Lead.query.filter_by(assigned_user_id=current_user.id).count()
+        opportunity_count = Opportunity.query.filter_by(assigned_user_id=current_user.id).count()
+        total_opportunity_value = db.session.query(func.sum(Opportunity.amount))\
+            .filter_by(assigned_user_id=current_user.id).scalar() or 0
+
+    return jsonify({
+        'customer_count': customer_count,
+        'lead_count': lead_count,
+        'opportunity_count': opportunity_count,
+        'total_opportunity_value': float(total_opportunity_value)
+    })
+
+@api_bp.route('/dashboard/recent-activities')
+@login_required
+def recent_activities():
+    """Get recent activities for dashboard"""
+    activities = Activity.query.filter_by(user_id=current_user.id)\
+        .order_by(Activity.created_at.desc()).limit(10).all()
+
+    return jsonify([{
+        'id': a.id,
+        'title': a.title,
+        'activity_type': a.activity_type.value,
+        'created_at': a.created_at.isoformat(),
+        'customer': a.customer.name if a.customer else None,
+        'contact': f"{a.contact.first_name} {a.contact.last_name}" if a.contact else None
+    } for a in activities])
+
+# Error handlers
+@api_bp.errorhandler(404)
+def not_found(error):
+    return jsonify({'error': 'Not found'}), 404
+
+@api_bp.errorhandler(500)
+def internal_error(error):
+    return jsonify({'error': 'Internal server error'}), 500
