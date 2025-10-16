@@ -11,7 +11,7 @@ A comprehensive Customer Relationship Management (CRM) system built with Flask, 
 - **Activity Tracking**: Log and track customer interactions
 - **File Uploads**: Secure document management with local file storage
 - **Role-Based Access Control**: Different permissions based on user roles
-- **Admin Interface**: Flask-Admin powered administrative interface
+- **Admin Interface**: Flask-Admin powered administrative interface plus custom admin dashboard for user management
 - **RESTful API**: Complete API for frontend integration
 - **Dashboard**: Real-time statistics and recent activities
 
@@ -44,6 +44,11 @@ A comprehensive Customer Relationship Management (CRM) system built with Flask, 
    python run.py
    ```
 
+5. **Access the UI**
+   - Web app: `http://localhost:5000`
+   - Custom admin dashboard: `http://localhost:5000/admin/dashboard`
+   - Flask-Admin interface: `http://localhost:5000/admin`
+
 ## Default Users
 
 After running `init_db.py`, you can log in with these default accounts:
@@ -51,6 +56,15 @@ After running `init_db.py`, you can log in with these default accounts:
 - **Admin**: admin@crm.com / admin123
 - **Manager**: manager@crm.com / manager123
 - **Employee**: employee@crm.com / employee123
+
+## Frontend Overview
+
+- **Dashboard**: Overview cards with customer, lead, opportunity, and activity metrics, recent activities list, and API-driven updates.
+- **Customers / Leads / Opportunities**: Interactive tables with search, filters, pagination, modals for create/edit, and API sync.
+- **Opportunities Views**: Table, Kanban, Calendar, and Gantt toggles for visualizing pipeline stages and timelines.
+- **Activities**: Activity feed per user with filtering by type/status.
+- **Profile**: Self-service profile management with password updates.
+- **Admin Dashboard**: Metrics for user counts, roles, CRM objects, recent logins, recent activities; user management table with inline status toggles and modal-driven CRUD.
 
 ## API Endpoints
 
@@ -97,6 +111,13 @@ After running `init_db.py`, you can log in with these default accounts:
 ### File Upload
 - `POST /api/upload` - Upload file
 
+### Admin
+- `GET /admin/metrics` - Fetch dashboard metrics
+- `GET /admin/users` - List users
+- `POST /admin/users` - Create user
+- `PUT /admin/users/<id>` - Update user
+- `PATCH /admin/users/<id>/status` - Toggle active state
+
 ## Role Permissions
 
 - **Admin**: Full access to all features and user management
@@ -133,7 +154,24 @@ To set up for development:
 
 1. Install development dependencies
 2. Run in debug mode: `FLASK_ENV=development python run.py`
-3. Access admin interface at `/admin`
+3. Access custom admin dashboard at `/admin/dashboard`
+4. Access Flask-Admin interface at `/admin`
+
+### Data Flow
+
+- UI pages fetch data from `/api/*` endpoints using Fetch API.
+- Admin dashboard fetches metrics/users via `/admin/metrics` and `/admin/users`.
+- Forms and modals submit JSON payloads to corresponding endpoints.
+- All protected routes require login; role checks enforce admin-only access.
+
+## Contribution Guide
+
+1. Fork the repository and clone locally.
+2. Create a feature branch: `git checkout -b feature/my-feature`.
+3. Install dependencies and run `python run.py` to ensure UI works.
+4. Write/update tests where applicable.
+5. Run linters/formatters if configured.
+6. Commit with descriptive messages and open a pull request detailing changes.
 
 ## Production Deployment
 
