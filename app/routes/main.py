@@ -109,3 +109,17 @@ def activities():
         .order_by(Activity.created_at.desc()).all()
 
     return render_template('main/activities.html', activities=activities, title='Activities')
+
+@main_bp.route('/contacts')
+@login_required
+@role_required(RoleEnum.ADMIN.value, RoleEnum.MANAGER.value, RoleEnum.EMPLOYEE.value)
+def contacts():
+    """Contact list page"""
+    from app.models import Contact
+
+    if current_user.is_admin or current_user.is_manager:
+        contacts = Contact.query.all()
+    else:
+        contacts = Contact.query.join(Contact.customer).filter(Contact.customer.has(assigned_user_id=current_user.id)).all()
+
+    return render_template('main/contacts.html', contacts=contacts, title='Contacts')

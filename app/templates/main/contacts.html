@@ -1,0 +1,364 @@
+{% extends "base.html" %}
+
+{% block page_title %}Contacts{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-card-foreground">Contacts</h1>
+            <p class="text-muted-foreground">Manage customer contacts and key relationships</p>
+        </div>
+        <button type="button" class="btn" onclick="openContactModal()">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+            </svg>
+            Add Contact
+        </button>
+    </div>
+
+    <div class="card">
+        <header class="pb-4">
+            <h3 class="text-lg font-medium text-card-foreground">Search & Filter</h3>
+        </header>
+        <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="md:col-span-2 grid gap-2">
+                <label for="contact-search" class="label">Search</label>
+                <input id="contact-search" type="text" class="input" placeholder="Search by name, email, phone, or company" oninput="applyContactFilters()">
+            </div>
+            <div class="grid gap-2">
+                <label for="contact-customer-filter" class="label">Customer</label>
+                <select id="contact-customer-filter" class="select" onchange="applyContactFilters()">
+                    <option value="">All Customers</option>
+                </select>
+            </div>
+        </section>
+    </div>
+
+    <div class="card">
+        <header class="pb-4">
+            <h3 class="text-lg font-medium text-card-foreground">Contacts</h3>
+        </header>
+        <section class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Customer</th>
+                        <th>Position</th>
+                        <th class="text-center">Primary</th>
+                        <th class="text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="contacts-table-body">
+                    <tr>
+                        <td><div class="skeleton h-4"></div></td>
+                        <td><div class="skeleton h-4"></div></td>
+                        <td><div class="skeleton h-4"></div></td>
+                        <td><div class="skeleton h-4"></div></td>
+                        <td><div class="skeleton h-4"></div></td>
+                        <td><div class="skeleton h-4"></div></td>
+                        <td><div class="skeleton h-4"></div></td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+        <footer class="pt-4 border-t border-border">
+            <div class="flex items-center justify-between">
+                <div class="text-sm text-muted-foreground">
+                    Showing <span id="contacts-start">0</span> to <span id="contacts-end">0</span> of <span id="contacts-total">0</span> contacts
+                </div>
+                <div class="flex gap-2">
+                    <button id="contacts-prev" class="btn-outline" onclick="changeContactsPage(-1)" disabled>
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                        </svg>
+                        Previous
+                    </button>
+                    <button id="contacts-next" class="btn-outline" onclick="changeContactsPage(1)">
+                        Next
+                        <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </footer>
+    </div>
+</div>
+
+<dialog id="contact-modal" class="dialog max-w-2xl w-full" aria-labelledby="contact-modal-title">
+    <article class="bg-card text-card-foreground border border-border rounded-lg shadow-xl">
+        <header class="flex items-start justify-between gap-4 p-6 pb-4">
+            <div>
+                <h2 id="contact-modal-title" class="text-xl font-bold">Add Contact</h2>
+                <p class="text-sm text-muted-foreground">Keep customer contact information up to date.</p>
+            </div>
+            <button type="button" class="btn-icon-outline" onclick="closeContactModal()" title="Close dialog">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </header>
+        <section class="p-6 pt-0">
+            <form id="contact-form" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="grid gap-2">
+                        <label for="contact-first-name" class="label">First Name<span class="text-destructive">*</span></label>
+                        <input id="contact-first-name" name="first_name" type="text" class="input" required>
+                    </div>
+                    <div class="grid gap-2">
+                        <label for="contact-last-name" class="label">Last Name<span class="text-destructive">*</span></label>
+                        <input id="contact-last-name" name="last_name" type="text" class="input" required>
+                    </div>
+                    <div class="grid gap-2">
+                        <label for="contact-email" class="label">Email</label>
+                        <input id="contact-email" name="email" type="email" class="input">
+                    </div>
+                    <div class="grid gap-2">
+                        <label for="contact-phone" class="label">Phone</label>
+                        <input id="contact-phone" name="phone" type="tel" class="input">
+                    </div>
+                    <div class="grid gap-2">
+                        <label for="contact-position" class="label">Position</label>
+                        <input id="contact-position" name="position" type="text" class="input">
+                    </div>
+                    <div class="grid gap-2">
+                        <label for="contact-department" class="label">Department</label>
+                        <input id="contact-department" name="department" type="text" class="input">
+                    </div>
+                    <div class="grid gap-2">
+                        <label for="contact-customer" class="label">Customer<span class="text-destructive">*</span></label>
+                        <select id="contact-customer" name="customer_id" class="select" required></select>
+                    </div>
+                    <div class="grid gap-2">
+                        <label for="contact-primary" class="label">Primary Contact</label>
+                        <select id="contact-primary" name="is_primary" class="select">
+                            <option value="false">No</option>
+                            <option value="true">Yes</option>
+                        </select>
+                    </div>
+                    <div class="md:col-span-2 grid gap-2">
+                        <label for="contact-notes" class="label">Notes</label>
+                        <textarea id="contact-notes" name="notes" class="textarea" rows="3"></textarea>
+                    </div>
+                </div>
+            </form>
+        </section>
+        <footer class="flex justify-end gap-3 p-6 pt-0 border-t border-border">
+            <button type="button" class="btn-outline" onclick="closeContactModal()">Cancel</button>
+            <button type="submit" form="contact-form" class="btn">Save Contact</button>
+        </footer>
+    </article>
+</dialog>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let contacts = [];
+let filteredContacts = [];
+let customers = [];
+let contactsPage = 1;
+const contactsPerPage = 10;
+const contactModal = document.getElementById('contact-modal');
+const contactForm = document.getElementById('contact-form');
+const contactModalTitle = document.getElementById('contact-modal-title');
+
+function openContactModal(contact) {
+    if (contact) {
+        contactModalTitle.textContent = 'Edit Contact';
+        contactForm.dataset.contactId = contact.id;
+        document.getElementById('contact-first-name').value = contact.first_name;
+        document.getElementById('contact-last-name').value = contact.last_name;
+        document.getElementById('contact-email').value = contact.email || '';
+        document.getElementById('contact-phone').value = contact.phone || '';
+        document.getElementById('contact-position').value = contact.position || '';
+        document.getElementById('contact-department').value = contact.department || '';
+        document.getElementById('contact-customer').value = contact.customer_id;
+        document.getElementById('contact-primary').value = contact.is_primary ? 'true' : 'false';
+        document.getElementById('contact-notes').value = contact.notes || '';
+    } else {
+        contactModalTitle.textContent = 'Add Contact';
+        delete contactForm.dataset.contactId;
+        contactForm.reset();
+        document.getElementById('contact-primary').value = 'false';
+    }
+    if (typeof contactModal.showModal === 'function') {
+        contactModal.showModal();
+    } else {
+        contactModal.setAttribute('open', '');
+    }
+}
+
+function closeContactModal() {
+    if (typeof contactModal.close === 'function') {
+        contactModal.close();
+    } else {
+        contactModal.removeAttribute('open');
+    }
+}
+
+function paginateContacts() {
+    const start = (contactsPage - 1) * contactsPerPage;
+    const end = start + contactsPerPage;
+    const pageItems = filteredContacts.slice(start, end);
+    const tbody = document.getElementById('contacts-table-body');
+    tbody.innerHTML = '';
+
+    if (!pageItems.length) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-6 text-muted-foreground">No contacts found</td></tr>';
+    } else {
+        pageItems.forEach(contact => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td class="font-medium">${contact.full_name}</td>
+                <td class="text-muted-foreground">${contact.email || '-'}</td>
+                <td class="text-muted-foreground">${contact.phone || '-'}</td>
+                <td class="text-muted-foreground">${contact.customer_name || '-'}</td>
+                <td class="text-muted-foreground">${contact.position || '-'}</td>
+                <td class="text-center">${contact.is_primary ? '<span class="badge badge-success">Yes</span>' : '<span class="badge badge-outline">No</span>'}</td>
+                <td class="text-right">
+                    <div class="flex justify-end gap-2">
+                        <button type="button" class="btn-icon-outline" title="Edit" onclick="loadContact(${contact.id})">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                            </svg>
+                        </button>
+                        <button type="button" class="btn-icon-destructive" title="Delete" onclick="deleteContact(${contact.id})">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
+    const totalPages = Math.ceil(filteredContacts.length / contactsPerPage) || 1;
+    document.getElementById('contacts-start').textContent = filteredContacts.length ? start + 1 : 0;
+    document.getElementById('contacts-end').textContent = Math.min(end, filteredContacts.length);
+    document.getElementById('contacts-total').textContent = filteredContacts.length;
+    document.getElementById('contacts-prev').disabled = contactsPage <= 1;
+    document.getElementById('contacts-next').disabled = contactsPage >= totalPages;
+}
+
+function changeContactsPage(delta) {
+    const totalPages = Math.ceil(filteredContacts.length / contactsPerPage) || 1;
+    const next = contactsPage + delta;
+    if (next >= 1 && next <= totalPages) {
+        contactsPage = next;
+        paginateContacts();
+    }
+}
+
+function applyContactFilters() {
+    const searchValue = document.getElementById('contact-search').value.toLowerCase();
+    const customerFilter = document.getElementById('contact-customer-filter').value;
+    filteredContacts = contacts.filter(contact => {
+        const matchesSearch = [contact.full_name, contact.email, contact.phone, contact.customer_name]
+            .filter(Boolean)
+            .some(value => value.toLowerCase().includes(searchValue));
+        const matchesCustomer = !customerFilter || String(contact.customer_id) === customerFilter;
+        return matchesSearch && matchesCustomer;
+    });
+    contactsPage = 1;
+    paginateContacts();
+}
+
+async function fetchContacts() {
+    try {
+        const response = await fetch('/api/contacts');
+        const data = await response.json();
+        contacts = data.map(item => ({
+            ...item,
+            full_name: `${item.first_name} ${item.last_name}`.trim()
+        }));
+        filteredContacts = [...contacts];
+        paginateContacts();
+    } catch (error) {
+        console.error('Error loading contacts:', error);
+        showToast('error', 'Failed to load contacts');
+    }
+}
+
+async function fetchCustomersForContacts() {
+    try {
+        const response = await fetch('/api/customers');
+        customers = await response.json();
+        const filterSelect = document.getElementById('contact-customer-filter');
+        const modalSelect = document.getElementById('contact-customer');
+        filterSelect.innerHTML = '<option value="">All Customers</option>';
+        modalSelect.innerHTML = '<option value="" disabled selected>Select Customer</option>';
+        customers.forEach(customer => {
+            const option = document.createElement('option');
+            option.value = customer.id;
+            option.textContent = customer.name;
+            filterSelect.appendChild(option.cloneNode(true));
+            modalSelect.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Error loading customers:', error);
+    }
+}
+
+async function loadContact(id) {
+    try {
+        const response = await fetch(`/api/contacts/${id}`);
+        if (!response.ok) throw new Error('Unable to load contact');
+        const contact = await response.json();
+        openContactModal(contact);
+    } catch (error) {
+        console.error('Error loading contact:', error);
+        showToast('error', 'Failed to load contact details');
+    }
+}
+
+async function deleteContact(id) {
+    if (!confirm('Are you sure you want to delete this contact?')) {
+        return;
+    }
+    try {
+        const response = await fetch(`/api/contacts/${id}`, { method: 'DELETE' });
+        if (!response.ok) throw new Error('Delete failed');
+        showToast('success', 'Contact deleted successfully');
+        await fetchContacts();
+    } catch (error) {
+        console.error('Error deleting contact:', error);
+        showToast('error', 'Failed to delete contact');
+    }
+}
+
+contactForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    const formData = new FormData(contactForm);
+    const payload = Object.fromEntries(formData.entries());
+    payload.is_primary = payload.is_primary === 'true';
+    const contactId = contactForm.dataset.contactId;
+    const url = contactId ? `/api/contacts/${contactId}` : '/api/contacts';
+    const method = contactId ? 'PUT' : 'POST';
+    try {
+        const response = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (!response.ok) throw new Error('Save failed');
+        closeContactModal();
+        showToast('success', `Contact ${contactId ? 'updated' : 'created'} successfully`);
+        await fetchContacts();
+    } catch (error) {
+        console.error('Error saving contact:', error);
+        showToast('error', 'Failed to save contact');
+    }
+});
+
+document.addEventListener('DOMContentLoaded', async () => {
+    await Promise.all([fetchCustomersForContacts(), fetchContacts()]);
+    applyContactFilters();
+});
+</script>
+{% endblock %}

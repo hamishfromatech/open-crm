@@ -4,7 +4,8 @@ from werkzeug.utils import secure_filename
 import os
 from datetime import datetime
 from app import db
-from app.models import Customer, Contact, Lead, Opportunity, Activity, Document, RoleEnum
+from app.models import (Customer, Contact, Lead, Opportunity, Activity, Document, User,
+                        RoleEnum, LeadStatusEnum, OpportunityStatusEnum, ActivityTypeEnum)
 from app.routes.main import role_required
 
 api_bp = Blueprint('api', __name__)
@@ -50,26 +51,75 @@ def upload_file():
         db.session.add(document)
         db.session.commit()
 
-        return jsonify({
-            'message': 'File uploaded successfully',
-            'document_id': document.id,
-            'filename': filename
-        }), 201
+        return jsonify({'message': 'File uploaded successfully', 'document': _serialize_document(document)}), 201
+
+
+@api_bp.route('/documents', methods=['GET'])
+@login_required
+def list_documents():
+    """List documents optionally filtered by customer"""
+    customer_id = request.args.get('customer_id', type=int)
+    query = Document.query
+
+    if customer_id:
+        query = query.filter_by(customer_id=customer_id)
+
+    if not (current_user.is_admin or current_user.is_manager):
+        query = query.join(Document.customer).filter(Customer.assigned_user_id == current_user.id)
+
+    documents = query.order_by(Document.created_at.desc()).all()
+    return jsonify([_serialize_document(doc) for doc in documents])
+
+
+@api_bp.route('/documents/<int:document_id>', methods=['GET'])
+@login_required
+def download_document(document_id):
+    """Download a specific document"""
+    document = Document.query.get_or_404(document_id)
+
+    if document.customer and not (current_user.is_admin or current_user.is_manager):
+        if document.customer.assigned_user_id != current_user.id:
+            return jsonify({'error': 'Permission denied'}), 403
+
+    directory = os.path.dirname(document.file_path)
+    filename = os.path.basename(document.file_path)
+
+    return send_from_directory(directory, filename, as_attachment=True, download_name=document.original_filename)
+
+
+@api_bp.route('/documents/<int:document_id>', methods=['DELETE'])
+@login_required
+@role_required(RoleEnum.ADMIN.value, RoleEnum.MANAGER.value, RoleEnum.EMPLOYEE.value)
+def delete_document(document_id):
+    """Delete a document"""
+    document = Document.query.get_or_404(document_id)
+
+    if document.customer and not (current_user.is_admin or current_user.is_manager):
+        if document.customer.assigned_user_id != current_user.id:
+            return jsonify({'error': 'Permission denied'}), 403
+
+    try:
+        if os.path.exists(document.file_path):
+            os.remove(document.file_path)
+    except OSError:
+        pass
+
+    serialized = _serialize_document(document)
+    db.session.delete(document)
+    db.session.commit()
+
+    return jsonify({'message': 'Document deleted successfully', 'document': serialized})
 
 # CRUD API endpoints for Customer
 @api_bp.route('/customers', methods=['GET'])
 @login_required
 def get_customers():
     """Get all customers"""
-    customers = Customer.query.all()
-    return jsonify([{
-        'id': c.id,
-        'name': c.name,
-        'email': c.email,
-        'company': c.company,
-        'phone': c.phone,
-        'assigned_user': c.assigned_user.get_full_name() if c.assigned_user else None
-    } for c in customers])
+    if current_user.is_admin or current_user.is_manager:
+        customers = Customer.query.all()
+    else:
+        customers = Customer.query.filter_by(assigned_user_id=current_user.id).all()
+    return jsonify([_serialize_customer(c) for c in customers])
 
 @api_bp.route('/customers', methods=['POST'])
 @login_required
@@ -93,7 +143,7 @@ def create_customer():
     db.session.add(customer)
     db.session.commit()
 
-    return jsonify({'message': 'Customer created successfully', 'id': customer.id}), 201
+    return jsonify({'message': 'Customer created successfully', 'customer': _serialize_customer(customer)}), 201
 
 @api_bp.route('/customers/<int:id>', methods=['GET'])
 @login_required
@@ -101,16 +151,7 @@ def get_customer(id):
     """Get a specific customer"""
     customer = Customer.query.get_or_404(id)
     return jsonify({
-        'id': customer.id,
-        'name': customer.name,
-        'email': customer.email,
-        'phone': customer.phone,
-        'company': customer.company,
-        'address': customer.address,
-        'website': customer.website,
-        'industry': customer.industry,
-        'notes': customer.notes,
-        'assigned_user_id': customer.assigned_user_id
+        **_serialize_customer(customer)
     })
 
 @api_bp.route('/customers/<int:id>', methods=['PUT'])
@@ -133,7 +174,7 @@ def update_customer(id):
 
     db.session.commit()
 
-    return jsonify({'message': 'Customer updated successfully'})
+    return jsonify({'message': 'Customer updated successfully', 'customer': _serialize_customer(customer)})
 
 @api_bp.route('/customers/<int:id>', methods=['DELETE'])
 @login_required
@@ -144,26 +185,168 @@ def delete_customer(id):
     db.session.delete(customer)
     db.session.commit()
 
-    return jsonify({'message': 'Customer deleted successfully'})
+    return jsonify({'message': 'Customer deleted successfully', 'customer': _serialize_customer(customer)})
 
 # Similar CRUD endpoints for other entities would go here
 # For brevity, I'll add a few more key ones
 
 # CRUD API endpoints for Contacts
+def _serialize_contact(contact):
+    return {
+        'id': contact.id,
+        'first_name': contact.first_name,
+        'last_name': contact.last_name,
+        'email': contact.email,
+        'phone': contact.phone,
+        'position': contact.position,
+        'department': contact.department,
+        'notes': contact.notes,
+        'customer_id': contact.customer_id,
+        'customer_name': contact.customer.name if contact.customer else None,
+        'is_primary': contact.is_primary,
+        'created_at': contact.created_at.isoformat() if contact.created_at else None
+    }
+
+
+def _coerce_bool(value, default=False):
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    if isinstance(value, str):
+        return value.strip().lower() in {'1', 'true', 'yes', 'y', 'on'}
+    return default
+
+
+def _serialize_document(document):
+    return {
+        'id': document.id,
+        'filename': document.filename,
+        'original_filename': document.original_filename,
+        'file_size': document.file_size,
+        'mime_type': document.mime_type,
+        'customer_id': document.customer_id,
+        'uploaded_by': document.uploaded_by,
+        'uploaded_by_name': document.uploader.get_full_name() if document.uploader else None,
+        'created_at': document.created_at.isoformat() if document.created_at else None,
+        'description': document.description,
+        'is_public': document.is_public
+    }
+
+
+def _parse_enum(value, enum_cls, default=None):
+    if value is None:
+        return default
+    if isinstance(value, enum_cls):
+        return value
+    try:
+        return enum_cls(value)
+    except ValueError:
+        try:
+            return enum_cls[value]
+        except KeyError:
+            return default
+
+
+def _parse_iso_datetime(value):
+    if not value:
+        return None
+    if isinstance(value, datetime):
+        return value
+    try:
+        return datetime.fromisoformat(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _serialize_customer(customer):
+    return {
+        'id': customer.id,
+        'name': customer.name,
+        'email': customer.email,
+        'phone': customer.phone,
+        'company': customer.company,
+        'address': customer.address,
+        'website': customer.website,
+        'industry': customer.industry,
+        'notes': customer.notes,
+        'assigned_user_id': customer.assigned_user_id,
+        'assigned_user': customer.assigned_user.get_full_name() if customer.assigned_user else None,
+        'created_at': customer.created_at.isoformat() if customer.created_at else None,
+        'updated_at': customer.updated_at.isoformat() if customer.updated_at else None
+    }
+
+
+def _serialize_lead(lead):
+    return {
+        'id': lead.id,
+        'title': lead.title,
+        'description': lead.description,
+        'source': lead.source,
+        'status': lead.status.value if lead.status else None,
+        'value': lead.value,
+        'probability': lead.probability,
+        'customer_id': lead.customer_id,
+        'customer': lead.customer.name if lead.customer else None,
+        'assigned_user_id': lead.assigned_user_id,
+        'assigned_user': lead.assigned_user.get_full_name() if lead.assigned_user else None,
+        'expected_close_date': lead.expected_close_date.isoformat() if lead.expected_close_date else None,
+        'created_at': lead.created_at.isoformat() if lead.created_at else None,
+        'updated_at': lead.updated_at.isoformat() if lead.updated_at else None
+    }
+
+
+def _serialize_opportunity(opportunity):
+    return {
+        'id': opportunity.id,
+        'name': opportunity.name,
+        'description': opportunity.description,
+        'amount': opportunity.amount,
+        'probability': opportunity.probability,
+        'status': opportunity.status.value if opportunity.status else None,
+        'customer_id': opportunity.customer_id,
+        'customer': opportunity.customer.name if opportunity.customer else None,
+        'lead_id': opportunity.lead_id,
+        'lead': opportunity.lead.title if opportunity.lead else None,
+        'assigned_user_id': opportunity.assigned_user_id,
+        'assigned_user': opportunity.assigned_user.get_full_name() if opportunity.assigned_user else None,
+        'expected_close_date': opportunity.expected_close_date.isoformat() if opportunity.expected_close_date else None,
+        'created_at': opportunity.created_at.isoformat() if opportunity.created_at else None,
+        'updated_at': opportunity.updated_at.isoformat() if opportunity.updated_at else None,
+        'closed_date': opportunity.closed_date.isoformat() if opportunity.closed_date else None
+    }
+
+
+def _serialize_activity(activity):
+    return {
+        'id': activity.id,
+        'title': activity.title,
+        'description': activity.description,
+        'activity_type': activity.activity_type.value if activity.activity_type else None,
+        'user_id': activity.user_id,
+        'user': activity.user.get_full_name() if activity.user else None,
+        'customer_id': activity.customer_id,
+        'customer': activity.customer.name if activity.customer else None,
+        'contact_id': activity.contact_id,
+        'contact': activity.contact.get_full_name() if activity.contact else None,
+        'lead_id': activity.lead_id,
+        'lead': activity.lead.title if activity.lead else None,
+        'opportunity_id': activity.opportunity_id,
+        'opportunity': activity.opportunity.name if activity.opportunity else None,
+        'due_date': activity.due_date.isoformat() if activity.due_date else None,
+        'completed': activity.completed,
+        'created_at': activity.created_at.isoformat() if activity.created_at else None
+    }
+
+
 @api_bp.route('/contacts', methods=['GET'])
 @login_required
 def get_contacts():
     """Get all contacts"""
     contacts = Contact.query.all()
-    return jsonify([{
-        'id': c.id,
-        'first_name': c.first_name,
-        'last_name': c.last_name,
-        'email': c.email,
-        'phone': c.phone,
-        'position': c.position,
-        'customer': c.customer.name if c.customer else None
-    } for c in contacts])
+    return jsonify([_serialize_contact(c) for c in contacts])
 
 @api_bp.route('/contacts', methods=['POST'])
 @login_required
@@ -181,13 +364,21 @@ def create_contact():
         department=data.get('department'),
         notes=data.get('notes'),
         customer_id=data['customer_id'],
-        is_primary=data.get('is_primary', False)
+        is_primary=_coerce_bool(data.get('is_primary'), False)
     )
 
     db.session.add(contact)
     db.session.commit()
 
-    return jsonify({'message': 'Contact created successfully', 'id': contact.id}), 201
+    return jsonify({'message': 'Contact created successfully', 'contact': _serialize_contact(contact)}), 201
+
+
+@api_bp.route('/contacts/<int:id>', methods=['GET'])
+@login_required
+def get_contact(id):
+    """Get a specific contact"""
+    contact = Contact.query.get_or_404(id)
+    return jsonify(_serialize_contact(contact))
 
 @api_bp.route('/contacts/<int:id>', methods=['PUT'])
 @login_required
@@ -204,11 +395,14 @@ def update_contact(id):
     contact.position = data.get('position', contact.position)
     contact.department = data.get('department', contact.department)
     contact.notes = data.get('notes', contact.notes)
-    contact.is_primary = data.get('is_primary', contact.is_primary)
+    if 'customer_id' in data:
+        contact.customer_id = data['customer_id']
+    if 'is_primary' in data:
+        contact.is_primary = _coerce_bool(data['is_primary'], contact.is_primary)
 
     db.session.commit()
 
-    return jsonify({'message': 'Contact updated successfully'})
+    return jsonify({'message': 'Contact updated successfully', 'contact': _serialize_contact(contact)})
 
 @api_bp.route('/contacts/<int:id>', methods=['DELETE'])
 @login_required
@@ -216,10 +410,11 @@ def update_contact(id):
 def delete_contact(id):
     """Delete a contact"""
     contact = Contact.query.get_or_404(id)
+    serialized = _serialize_contact(contact)
     db.session.delete(contact)
     db.session.commit()
 
-    return jsonify({'message': 'Contact deleted successfully'})
+    return jsonify({'message': 'Contact deleted successfully', 'contact': serialized})
 
 @api_bp.route('/leads', methods=['GET'])
 @login_required
